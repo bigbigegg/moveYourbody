@@ -1,15 +1,16 @@
 // ============================================================
 // 结算界面
+// 双手上举 2 秒重新挑战
 // ============================================================
 
 import { useGameStore } from '../../store/gameStore';
 import { playSuccess } from '../../utils/audio';
 import { useEffect } from 'react';
+import { GesturePrompt } from './GesturePrompt';
 
 export function ResultScreen() {
   const phase = useGameStore((s) => s.phase);
   const moveResults = useGameStore((s) => s.moveResults);
-  const reset = useGameStore((s) => s.reset);
 
   if (phase !== 'complete') return null;
 
@@ -29,52 +30,41 @@ export function ResultScreen() {
 
   const starEmoji = ['😅', '⭐', '⭐⭐', '🌟🌟🌟'];
 
-  const handleRestart = () => {
-    reset();
-    // 重新初始化关卡
-    const { initLevel } = useGameStore.getState();
-    initLevel();
-  };
-
   return (
-    <div className="flex flex-col items-center justify-center text-center h-full w-full">
-      <h1 className="text-2xl font-bold mb-2">🎉 关卡完成！</h1>
-      <div className="text-3xl mb-3">{starEmoji[stars]}</div>
+    <div className="flex flex-col items-center justify-center text-center h-full w-full px-4">
+      <h1 className="text-5xl font-bold mb-3">🎉 关卡完成！</h1>
+      <div className="text-5xl mb-4">{starEmoji[stars]}</div>
 
       {stars === 3 ? (
-        <p className="text-green-400 mb-4">全部达标！太棒了！</p>
+        <p className="text-green-400 text-2xl mb-5">全部达标！太棒了！</p>
       ) : (
-        <p className="text-yellow-400 mb-4">
+        <p className="text-yellow-400 text-2xl mb-5">
           {passedCount}/{totalCount} 达标，继续加油！
         </p>
       )}
 
       {/* 各动作结果 */}
-      <div className="w-full max-w-xs space-y-1.5 mb-5">
+      <div className="w-full max-w-sm space-y-2 mb-6">
         {moveResults.map((result, i) => (
           <div
             key={i}
-            className={`flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm border ${
+            className={`flex items-center gap-3 rounded-xl px-5 py-3 text-left text-lg border ${
               result.passed
                 ? 'bg-green-500/10 border-green-500/30'
                 : 'bg-red-500/10 border-red-500/30'
             }`}
           >
-            <span>{result.passed ? '✅' : '❌'}</span>
+            <span className="text-xl">{result.passed ? '✅' : '❌'}</span>
             <span className="font-medium text-white flex-1">{result.moveName}</span>
-            <span className="text-gray-400 text-xs">
+            <span className="text-gray-400">
               {result.completed}/{result.target}
             </span>
           </div>
         ))}
       </div>
 
-      <button
-        onClick={handleRestart}
-        className="w-full max-w-xs py-3 rounded-xl text-lg font-bold bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-500/30 hover:scale-105 active:scale-95 transition-all duration-300"
-      >
-        重新挑战
-      </button>
+      {/* 手势提示（放大） */}
+      <GesturePrompt action="重新挑战" large />
     </div>
   );
 }

@@ -12,6 +12,7 @@
 import { useCallback, useRef } from 'react';
 import type { Pose } from '../types';
 import { useGameStore } from '../store/gameStore';
+import { initAudio } from '../utils/audio';
 
 interface UseGameLoopOptions {
   /** 每 N 帧执行一次姿态检测（移动端建议 2-3） */
@@ -38,6 +39,7 @@ export function useGameLoop(
   const frameCountRef = useRef<number>(0);
   const isRunningRef = useRef<boolean>(false);
   const missingSinceRef = useRef<number | null>(null);
+  const gestureHoldRef = useRef<number>(0);
 
   const store = useGameStore;
 
@@ -87,18 +89,44 @@ export function useGameLoop(
 
     ctx.restore();
 
-    // ---- 姿态检测（跳帧） ----
+    // ---- 姿态检测（跳帧，所有阶段都检测） ----
     const phase = store.getState().phase;
-    const shouldDetect =
-      (phase === 'active' || phase === 'rest') &&
-      frameCountRef.current % options.skipFrames === 0;
+    const shouldDetect = frameCountRef.current % options.skipFrames === 0;
 
     if (shouldDetect && detectFn.current) {
       const pose = detectFn.current();
 
       if (pose) {
-        // 检测到人，清除离开计时器
         missingSinceRef.current = null;
+
+        // ---- 手势检测（idle / complete 阶段） ----
+        if (phase === 'idle' || phase === 'complete') {
+          const lw = pose[15], rw = pose[16], ls = pose[11], rs = pose[12];
+          const leftUp = lw && ls ? lw.y < ls.y - 0.05 : false;
+          const rightUp = rw && rs ? rw.y < rs.y - 0.05 : false;
+          const bothUp = leftUp && rightUp;
+
+          gestureHoldRef.current = bothUp
+            ? (gestureHoldRef.current ?? 0) + deltaTime
+            : 0;
+
+          // 保持 2 秒确认
+          const progress = Math.min(gestureHoldRef.current / 2.0, 1.0);
+          store.getState().setGestureProgress(progress);
+
+          if (progress >= 1.0) {
+            gestureHoldRef.current = 0;
+            store.getState().setGestureProgress(0);
+            // 触发对应操作
+            if (phase === 'idle') {
+              initAudio();
+              store.getState().startLevel();
+            } else {
+              store.getState().reset();
+              store.getState().initLevel();
+            }
+          }
+        }
 
         if (phase === 'active') {
           const { ruleEngine } = store.getState();

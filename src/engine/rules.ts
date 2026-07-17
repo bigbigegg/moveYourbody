@@ -9,8 +9,6 @@
 import type { ActionRule, Pose } from '../types';
 import { LANDMARK } from '../types';
 import {
-  calculateAngle,
-  calculateTorsoLeanAngle,
   depthDiff,
   distance,
   isWristAboveShoulder,
@@ -22,13 +20,6 @@ import {
 
 /** 手臂上举：手腕需比肩膀高出的归一化距离 */
 const ARM_RAISE_THRESHOLD = 0.05;
-
-/** 深蹲：膝关节角度大于此值视为站立 */
-const SQUAT_UP_ANGLE = 140;
-/** 深蹲：膝关节角度小于此值视为蹲下 */
-const SQUAT_DOWN_ANGLE = 100;
-/** 深蹲：躯干前倾角度超过此值视为弯腰代偿，不计数 */
-const SQUAT_TORSO_LEAN_MAX = 30;
 
 /** 开合跳：闭合状态下手脚间距倍率上限（相对于肩宽/骨盆宽） */
 const JJ_CLOSED_RATIO = 1.2;
@@ -72,29 +63,31 @@ function createArmRaisesRule(): ActionRule {
       const bothDown = !leftUp && !rightUp;
 
       let detected = false;
+      // 保持进度 0-100（通过 currentAngle 传给 HUD）
+      let holdProgress = 0;
 
       if (stage === 'down' && bothUp) {
-        // 双臂同时上举 → 开始计时
         stage = 'up';
         holdStartTime = Date.now();
       } else if (stage === 'up') {
         if (!bothUp) {
-          // 手臂放下了，重置
           stage = 'down';
           holdStartTime = null;
-        } else if (holdStartTime && Date.now() - holdStartTime >= ARM_RAISE_HOLD_MS) {
-          // 保持 1 秒 → 完成 1 次
-          stage = 'completed';
-          count++;
-          detected = true;
-          holdStartTime = null;
+        } else if (holdStartTime) {
+          const elapsed = Date.now() - holdStartTime;
+          holdProgress = Math.round(Math.min(elapsed / ARM_RAISE_HOLD_MS, 1) * 100);
+          if (elapsed >= ARM_RAISE_HOLD_MS) {
+            stage = 'completed';
+            count++;
+            detected = true;
+            holdStartTime = null;
+          }
         }
       } else if (stage === 'completed' && bothDown) {
-        // 手臂放下 → 准备下一次
         stage = 'down';
       }
 
-      return { detected, count, stage };
+      return { detected, count, currentAngle: holdProgress, stage };
     },
 
     getProgress() {
@@ -110,72 +103,77 @@ function createArmRaisesRule(): ActionRule {
 }
 
 // ============================================================
-// 规则 2：标准深蹲 (Squats)
+// 规则 2：双臂侧平举 (Side Arm Raises)
+// 要求：双臂向两侧平举至肩高，保持 1 秒
 // ============================================================
 
-function createSquatsRule(): ActionRule {
-  let stage: 'up' | 'down' = 'up';
+/** 侧平举：手腕 Y 与肩膀 Y 的允许偏差 */
+const SIDE_RAISE_Y_THRESHOLD = 0.08;
+/** 侧平举需要保持的毫秒数 */
+const SIDE_RAISE_HOLD_MS = 1000;
+
+function createSideArmRaisesRule(): ActionRule {
+  let stage: 'down' | 'up' | 'completed' = 'down';
   let count = 0;
-  let currentAngle = 180;
-  let firstDetection = true;
+  let holdStartTime: number | null = null;
 
   return {
-    id: 'squats',
-    name: '标准深蹲',
-    description: '双脚与肩同宽，臀部向后坐，膝盖弯曲下蹲',
-    icon: '🦵',
+    id: 'side_arm_raises',
+    name: '双臂侧平举',
+    description: '双臂向两侧平举至与肩同高，保持1秒',
+    icon: '🏋️',
     targetType: 'reps',
     targetValue: 10,
 
     judge(pose: Pose) {
-      const hip = pose[LANDMARK.RIGHT_HIP];
-      const knee = pose[LANDMARK.RIGHT_KNEE];
-      const ankle = pose[LANDMARK.RIGHT_ANKLE];
-      const leftShoulder = pose[LANDMARK.LEFT_SHOULDER];
-      const rightShoulder = pose[LANDMARK.RIGHT_SHOULDER];
-      const leftHip = pose[LANDMARK.LEFT_HIP];
-      const rightHip = pose[LANDMARK.RIGHT_HIP];
+      const lw = pose[LANDMARK.LEFT_WRIST];
+      const rw = pose[LANDMARK.RIGHT_WRIST];
+      const ls = pose[LANDMARK.LEFT_SHOULDER];
+      const rs = pose[LANDMARK.RIGHT_SHOULDER];
 
-      currentAngle = calculateAngle(hip, knee, ankle);
-
-      // 检查躯干是否过度前倾（弯腰代偿）
-      const torsoLean = calculateTorsoLeanAngle(
-        leftShoulder, rightShoulder, leftHip, rightHip,
-      );
-      const isGoodForm = torsoLean < SQUAT_TORSO_LEAN_MAX;
+      // 双臂水平：手腕 Y 接近肩膀 Y
+      const leftHorizontal = Math.abs(lw.y - ls.y) < SIDE_RAISE_Y_THRESHOLD;
+      const rightHorizontal = Math.abs(rw.y - rs.y) < SIDE_RAISE_Y_THRESHOLD;
+      // 双臂张开：左右手腕间距较大（> 肩宽 × 1.5）
+      const armsWide = distance(lw, rw) > distance(ls, rs) * 1.5;
+      const bothUp = leftHorizontal && rightHorizontal && armsWide;
+      const bothDown = !leftHorizontal && !rightHorizontal;
 
       let detected = false;
+      let holdProgress = 0;
 
-      // 首次检测：如果用户一开始就蹲着，先进入 down 状态
-      if (firstDetection && currentAngle < SQUAT_DOWN_ANGLE) {
-        stage = 'down';
-      }
-      firstDetection = false;
-
-      if (currentAngle > SQUAT_UP_ANGLE && stage === 'down' && isGoodForm) {
-        // 蹲下后站起，且姿势标准
+      if (stage === 'down' && bothUp) {
         stage = 'up';
-        count++;
-        detected = true;
-      } else if (currentAngle < SQUAT_DOWN_ANGLE && stage === 'up') {
-        // 从站立到蹲下
+        holdStartTime = Date.now();
+      } else if (stage === 'up') {
+        if (!bothUp) {
+          stage = 'down';
+          holdStartTime = null;
+        } else if (holdStartTime) {
+          const elapsed = Date.now() - holdStartTime;
+          holdProgress = Math.round(Math.min(elapsed / SIDE_RAISE_HOLD_MS, 1) * 100);
+          if (elapsed >= SIDE_RAISE_HOLD_MS) {
+            stage = 'completed';
+            count++;
+            detected = true;
+            holdStartTime = null;
+          }
+        }
+      } else if (stage === 'completed' && bothDown) {
         stage = 'down';
       }
-      // 如果姿势不标准（弯腰），只更新角度不计数
-      // 如果角度回到 up 范围且当前是 down，但不满足 isGoodForm，不计数
 
-      return { detected, count, currentAngle, stage };
+      return { detected, count, currentAngle: holdProgress, stage };
     },
 
     getProgress() {
-      return { count, stage, angle: currentAngle };
+      return { count, stage };
     },
 
     reset() {
-      stage = 'up';
+      stage = 'down';
       count = 0;
-      currentAngle = 180;
-      firstDetection = true;
+      holdStartTime = null;
     },
   };
 }
@@ -193,8 +191,8 @@ function createJumpingJacksRule(): ActionRule {
     name: '开合跳',
     description: '跳起时手脚张开，落地时手脚并拢',
     icon: '⭐',
-    targetType: 'time',
-    targetValue: 20, // 20 秒
+    targetType: 'reps',
+    targetValue: 15,
 
     judge(pose: Pose) {
       const leftWrist = pose[LANDMARK.LEFT_WRIST];
@@ -257,8 +255,8 @@ function createTorsoTwistsRule(): ActionRule {
     name: '躯干扭转',
     description: '保持下半身稳定，上半身左右扭转',
     icon: '🔄',
-    targetType: 'time',
-    targetValue: 20, // 20 秒
+    targetType: 'reps',
+    targetValue: 10,
 
     judge(pose: Pose) {
       const leftShoulder = pose[LANDMARK.LEFT_SHOULDER];
@@ -327,7 +325,7 @@ export function createLevelOneRules(): Map<string, ActionRule> {
 export function getLevelOneRuleList(): ActionRule[] {
   return [
     createArmRaisesRule(),
-    createSquatsRule(),
+    createSideArmRaisesRule(),
     createJumpingJacksRule(),
     createTorsoTwistsRule(),
   ];

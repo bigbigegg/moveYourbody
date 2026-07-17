@@ -18,7 +18,7 @@ export function GameLayout({ cameraPanel, children }: GameLayoutProps) {
       </div>
 
       {/* 右侧：游戏 UI — 半屏 */}
-      <div className="w-1/2 h-full flex items-center justify-center bg-zinc-950 p-4">
+      <div className="w-1/2 h-full flex flex-col items-center justify-center bg-zinc-950 p-4">
         {children}
       </div>
     </div>

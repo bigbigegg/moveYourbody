@@ -15,6 +15,9 @@ interface GameStore extends LevelDynamicState {
   modelLoaded: boolean;
   cameraError: string | null;
 
+  // 手势交互
+  gestureProgress: number; // 0-1，手势保持进度
+
   // 内部引用（不触发 re-render）
   ruleEngine: RuleEngine;
   fsm: LevelFSM | null;
@@ -28,6 +31,8 @@ interface GameStore extends LevelDynamicState {
   onRepCompleted: (result: ActionResult) => void;
   /** 更新姿态数据（HUD 展示用） */
   updatePoseData: (angle: number, stage: string) => void;
+  /** 手势进度更新 */
+  setGestureProgress: (progress: number) => void;
   /** 设置摄像头状态 */
   setCameraReady: (ready: boolean) => void;
   setModelLoaded: (loaded: boolean) => void;
@@ -55,6 +60,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   cameraReady: false,
   modelLoaded: false,
   cameraError: null,
+  gestureProgress: 0,
   ruleEngine: new RuleEngine(),
   fsm: null,
 
@@ -108,6 +114,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ currentAngle: angle, currentStage: stage });
   },
 
+  setGestureProgress: (progress: number) => set({ gestureProgress: progress }),
   setCameraReady: (ready: boolean) => set({ cameraReady: ready }),
   setModelLoaded: (loaded: boolean) => set({ modelLoaded: loaded }),
   setCameraError: (error: string | null) => set({ cameraError: error }),
@@ -115,6 +122,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
   reset: () => {
     const { ruleEngine } = get();
     ruleEngine.resetAll();
-    set({ ...initialDynamicState, moveResults: [] });
+    set({ ...initialDynamicState, moveResults: [], gestureProgress: 0 });
   },
 }));

@@ -1,29 +1,31 @@
 // ============================================================
-// 动作指南组件
+// 动作指南 — 右侧面板底部
 // ============================================================
 
 import { useGameStore } from '../../store/gameStore';
 
 export function MoveGuide() {
   const phase = useGameStore((s) => s.phase);
+  const currentMoveIndex = useGameStore((s) => s.currentMoveIndex);
 
-  if (phase !== 'active' && phase !== 'rest') return null;
+  if (phase !== 'active') return null;
 
   const moves = [
-    { icon: '🙌', tips: '手臂尽量伸直，感受肩部发力' },
-    { icon: '🦵', tips: '膝盖不要超过脚尖，背挺直' },
-    { icon: '⭐', tips: '保持节奏，落地轻巧' },
-    { icon: '🔄', tips: '骨盆尽量不动，感受腰腹发力' },
+    { icon: '🙌', tips: '双臂上举，保持 1 秒' },
+    { icon: '🏋️', tips: '手臂伸直向两侧展开，保持水平' },
+    { icon: '⭐', tips: '保持节奏，手脚同时开合' },
+    { icon: '🔄', tips: '骨盆不动，上半身左右扭转' },
   ];
-  const currentMoveIndex = useGameStore((s) => s.currentMoveIndex);
   const move = moves[currentMoveIndex % moves.length];
   if (!move) return null;
 
   return (
-    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-sm rounded-full px-4 py-1.5 border border-white/10">
-      <span className="text-sm text-gray-300">
-        {move.icon} {move.tips}
-      </span>
+    <div className="mt-auto pb-4 pt-2 w-full flex justify-center">
+      <div className="bg-white/10 rounded-xl px-6 py-3 border border-white/10">
+        <span className="text-2xl text-white">
+          {move.icon} <span className="font-medium">{move.tips}</span>
+        </span>
+      </div>
     </div>
   );
 }

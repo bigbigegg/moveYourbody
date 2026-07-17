@@ -20,27 +20,27 @@ export function Countdown() {
   const displayNum = Math.ceil(seconds);
 
   const nextMoveIndex = moveResults.length;
-  const moves = ['手臂上举', '标准深蹲', '开合跳', '躯干扭转'];
+  const moves = ['手臂上举', '双臂侧平举', '开合跳', '躯干扭转'];
   const nextMoveName = moves[nextMoveIndex] ?? '';
 
   return (
     <div className="flex flex-col items-center justify-center text-center h-full w-full">
       {isCountdown ? (
         <>
-          <div className="text-8xl font-bold text-white" key={displayNum}>
+          <div className="text-[10rem] font-bold text-white leading-none" key={displayNum}>
             {displayNum}
           </div>
-          <p className="text-lg text-gray-300 mt-3">{currentMoveName}</p>
-          <p className="text-sm text-gray-500 mt-1">准备...</p>
+          <p className="text-2xl text-gray-300 mt-4">{currentMoveName}</p>
+          <p className="text-lg text-gray-500 mt-2">准备...</p>
         </>
       ) : (
         <>
-          <p className="text-xl text-gray-300 mb-3">休息一下 ☕</p>
-          <div className="text-7xl font-bold text-green-400">
+          <p className="text-2xl text-gray-300 mb-4">休息一下 ☕</p>
+          <div className="text-9xl font-bold text-green-400">
             {displayNum}
           </div>
           {nextMoveName && (
-            <p className="text-base text-gray-400 mt-3">
+            <p className="text-xl text-gray-400 mt-4">
               下一个：{nextMoveName}
             </p>
           )}
@@ -50,7 +50,6 @@ export function Countdown() {
   );
 }
 
-/** 倒计时音效 */
 export function useCountdownBeep() {
   const countdownSeconds = useGameStore((s) => s.countdownSeconds);
   const restSeconds = useGameStore((s) => s.restSeconds);
