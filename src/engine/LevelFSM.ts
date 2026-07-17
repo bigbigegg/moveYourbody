@@ -48,12 +48,17 @@ export class LevelFSM {
 
   /** 用户点击「开始」 */
   start(): void {
+    this.startFromMove(0);
+  }
+
+  /** 从指定动作开始 */
+  startFromMove(index: number): void {
     if (this.rules.length === 0) {
       console.warn('[LevelFSM] 没有配置任何动作');
       return;
     }
 
-    this.currentMoveIndex = 0;
+    this.currentMoveIndex = Math.max(0, Math.min(index, this.rules.length - 1));
     this.moveResults = [];
     this.currentReps = 0;
     this.currentAngle = 0;

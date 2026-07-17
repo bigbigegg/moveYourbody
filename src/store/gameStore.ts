@@ -27,6 +27,7 @@ interface GameStore extends LevelDynamicState {
   // Actions
   initLevel: () => void;
   startLevel: () => void;
+  startFromMove: (index: number) => void;
   /** 每帧调用，deltaTime 秒 */
   tick: (deltaTime: number) => void;
   /** 动作完成一次 */
@@ -97,6 +98,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
       console.log('[store] fsm.start() 已调用, 当前 phase:', fsm.getState().phase);
     } else {
       console.warn('[store] fsm 为空，无法开始');
+    }
+  },
+
+  startFromMove: (index: number) => {
+    const { fsm } = get();
+    if (fsm) {
+      fsm.startFromMove(index);
     }
   },
 

@@ -4,14 +4,21 @@
 // ============================================================
 
 import { useGameStore } from '../../store/gameStore';
+import { initAudio } from '../../utils/audio';
 import { GesturePrompt } from './GesturePrompt';
 
 export function StartScreen() {
   const cameraReady = useGameStore((s) => s.cameraReady);
   const modelLoaded = useGameStore((s) => s.modelLoaded);
   const cameraError = useGameStore((s) => s.cameraError);
+  const startFromMove = useGameStore((s) => s.startFromMove);
 
   const isReady = cameraReady && modelLoaded;
+
+  const handleJumpTo = (index: number) => {
+    initAudio();
+    startFromMove(index);
+  };
 
   const moves = [
     { name: '手臂上举', icon: '🙌', target: '10 次' },
@@ -37,7 +44,16 @@ export function StartScreen() {
           >
             <span className="text-3xl">{move.icon}</span>
             <span className="text-xl font-medium text-white flex-1">{move.name}</span>
-            <span className="text-lg text-green-400 font-mono">{move.target}</span>
+            <span className="text-lg text-green-400 font-mono mr-2">{move.target}</span>
+            {isReady && (
+              <button
+                onClick={(e) => { e.stopPropagation(); handleJumpTo(i); }}
+                className="px-3 py-1 rounded-lg bg-blue-500/30 hover:bg-blue-500/50 text-blue-300 text-sm font-medium border border-blue-400/30 transition-all hover:scale-105 active:scale-95"
+                title={`直接开始「${move.name}」`}
+              >
+                测试
+              </button>
+            )}
           </div>
         ))}
       </div>
