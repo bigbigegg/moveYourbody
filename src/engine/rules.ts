@@ -180,7 +180,11 @@ function createSideArmRaisesRule(): ActionRule {
 
 // ============================================================
 // 规则 3：开合跳 (Jumping Jacks)
+// 严格判定：双腿合拢+双手垂直放下 → 双腿岔开+双臂侧平举
 // ============================================================
+
+/** 开合跳：手臂水平偏差阈值 */
+const JJ_ARM_HORIZONTAL = 0.10;
 
 function createJumpingJacksRule(): ActionRule {
   let stage: 'closed' | 'open' = 'closed';
@@ -195,26 +199,36 @@ function createJumpingJacksRule(): ActionRule {
     targetValue: 15,
 
     judge(pose: Pose) {
-      const leftWrist = pose[LANDMARK.LEFT_WRIST];
-      const rightWrist = pose[LANDMARK.RIGHT_WRIST];
-      const leftAnkle = pose[LANDMARK.LEFT_ANKLE];
-      const rightAnkle = pose[LANDMARK.RIGHT_ANKLE];
-      const leftShoulder = pose[LANDMARK.LEFT_SHOULDER];
-      const rightShoulder = pose[LANDMARK.RIGHT_SHOULDER];
-      const leftHip = pose[LANDMARK.LEFT_HIP];
-      const rightHip = pose[LANDMARK.RIGHT_HIP];
+      const lw = pose[LANDMARK.LEFT_WRIST];
+      const rw = pose[LANDMARK.RIGHT_WRIST];
+      const la = pose[LANDMARK.LEFT_ANKLE];
+      const ra = pose[LANDMARK.RIGHT_ANKLE];
+      const ls = pose[LANDMARK.LEFT_SHOULDER];
+      const rs = pose[LANDMARK.RIGHT_SHOULDER];
+      const lh = pose[LANDMARK.LEFT_HIP];
+      const rh = pose[LANDMARK.RIGHT_HIP];
 
-      const shoulderWidth = distance(leftShoulder, rightShoulder);
-      const hipWidth = distance(leftHip, rightHip);
-      const wristDist = distance(leftWrist, rightWrist);
-      const ankleDist = distance(leftAnkle, rightAnkle);
+      const shoulderWidth = distance(ls, rs);
+      const hipWidth = distance(lh, rh);
+      const wristDist = distance(lw, rw);
+      const ankleDist = distance(la, ra);
 
-      const isOpen =
-        wristDist > shoulderWidth * JJ_OPEN_RATIO &&
-        ankleDist > hipWidth * JJ_OPEN_RATIO;
-      const isClosed =
-        wristDist < shoulderWidth * JJ_CLOSED_RATIO &&
-        ankleDist < hipWidth * JJ_CLOSED_RATIO;
+      // 手臂状态
+      const armsDown =
+        lw.y > ls.y + ARM_RAISE_THRESHOLD && rw.y > rs.y + ARM_RAISE_THRESHOLD;
+      const armsHorizontal =
+        Math.abs(lw.y - ls.y) < JJ_ARM_HORIZONTAL &&
+        Math.abs(rw.y - rs.y) < JJ_ARM_HORIZONTAL &&
+        wristDist > shoulderWidth * 1.5;
+
+      // 腿部状态
+      const legsTogether = ankleDist < hipWidth * JJ_CLOSED_RATIO;
+      const legsApart = ankleDist > hipWidth * JJ_OPEN_RATIO;
+
+      // 闭合：双腿合拢 + 双手垂直放下
+      const isClosed = legsTogether && armsDown;
+      // 张开：双腿岔开 + 双臂侧平举
+      const isOpen = legsApart && armsHorizontal;
 
       let detected = false;
 

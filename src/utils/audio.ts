@@ -14,10 +14,27 @@ export function initAudio(): void {
 
   try {
     audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
     initialized = true;
+    console.log('[audio] AudioContext 已初始化, state:', audioCtx.state);
   } catch (e) {
     console.warn('无法初始化音频上下文:', e);
   }
+}
+
+// 在首次用户交互时自动初始化音频
+if (typeof window !== 'undefined') {
+  const autoInit = () => {
+    initAudio();
+    document.removeEventListener('click', autoInit);
+    document.removeEventListener('touchstart', autoInit);
+    document.removeEventListener('keydown', autoInit);
+  };
+  document.addEventListener('click', autoInit);
+  document.addEventListener('touchstart', autoInit);
+  document.addEventListener('keydown', autoInit);
 }
 
 /**
