@@ -15,6 +15,7 @@ import { HUD } from './components/ui/HUD';
 import { MoveGuide } from './components/ui/MoveGuide';
 import { ResultScreen } from './components/ui/ResultScreen';
 import { EndButton } from './components/ui/EndButton';
+import { ParticleOverlay } from './components/effects/ParticleOverlay';
 import type { Pose } from './types';
 
 function App() {
@@ -101,6 +102,7 @@ function App() {
 
   return (
     <GameLayout cameraPanel={<CameraCanvas videoRef={videoRef} canvasRef={canvasRef} />}>
+      <ParticleOverlay />
       {phase === 'idle' && <StartScreen />}
       {(phase === 'countdown' || phase === 'rest') && (
         <>
