@@ -25,7 +25,7 @@ npm run dev
 | 音效 | Web Audio API |
 | HTTPS | @vitejs/plugin-basic-ssl |
 
-## 关卡一：晨间唤醒
+## 关卡一：一起来热身吧
 
 4 个动作，全部计次制：
 

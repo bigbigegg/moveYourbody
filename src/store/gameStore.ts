@@ -17,6 +17,8 @@ interface GameStore extends LevelDynamicState {
 
   // 手势交互
   gestureProgress: number; // 0-1，手势保持进度
+  // 屏幕震动
+  shakeKey: number;
 
   // 内部引用（不触发 re-render）
   ruleEngine: RuleEngine;
@@ -37,6 +39,8 @@ interface GameStore extends LevelDynamicState {
   setCameraReady: (ready: boolean) => void;
   setModelLoaded: (loaded: boolean) => void;
   setCameraError: (error: string | null) => void;
+  /** 触发屏幕震动 */
+  triggerShake: () => void;
   /** 完全重置 */
   reset: () => void;
 }
@@ -61,6 +65,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   modelLoaded: false,
   cameraError: null,
   gestureProgress: 0,
+  shakeKey: 0,
   ruleEngine: new RuleEngine(),
   fsm: null,
 
@@ -115,6 +120,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   setGestureProgress: (progress: number) => set({ gestureProgress: progress }),
+  triggerShake: () => set((s) => ({ shakeKey: s.shakeKey + 1 })),
   setCameraReady: (ready: boolean) => set({ cameraReady: ready }),
   setModelLoaded: (loaded: boolean) => set({ modelLoaded: loaded }),
   setCameraError: (error: string | null) => set({ cameraError: error }),

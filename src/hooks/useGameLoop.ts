@@ -12,7 +12,53 @@
 import { useCallback, useRef } from 'react';
 import type { Pose } from '../types';
 import { useGameStore } from '../store/gameStore';
-import { initAudio } from '../utils/audio';
+import { initAudio, playPerfect } from '../utils/audio';
+
+// ---- 粒子系统 ----
+interface Particle {
+  x: number; y: number; vx: number; vy: number;
+  life: number; maxLife: number; size: number;
+  color: string;
+}
+
+let particles: Particle[] = [];
+
+const PARTICLE_COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#a855f7', '#ec4899'];
+
+function spawnParticles(cx: number, cy: number, count = 40): void {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 80 + Math.random() * 200;
+    particles.push({
+      x: cx, y: cy,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 0.5 + Math.random() * 0.5,
+      maxLife: 0.5 + Math.random() * 0.5,
+      size: 4 + Math.random() * 8,
+      color: PARTICLE_COLORS[Math.floor(Math.random() * PARTICLE_COLORS.length)],
+    });
+  }
+}
+
+function updateAndDrawParticles(ctx: CanvasRenderingContext2D, dt: number): void {
+  particles = particles.filter((p) => {
+    p.life -= dt;
+    if (p.life <= 0) return false;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vy += 200 * dt; // gravity
+    const alpha = p.life / p.maxLife;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    return true;
+  });
+}
 
 interface UseGameLoopOptions {
   /** 每 N 帧执行一次姿态检测（移动端建议 2-3） */
@@ -161,6 +207,13 @@ export function useGameLoop(
             if (result.detected) {
               console.log('[GameLoop] ✅ 动作完成! count:', result.count, 'stage:', result.stage);
               store.getState().onRepCompleted(result);
+
+              // 开合跳（索引 2）：震动 + 粒子 + 音效
+              if (state.currentMoveIndex === 2) {
+                playPerfect();
+                store.getState().triggerShake();
+                spawnParticles(canvas.width / 2, canvas.height / 2, 50);
+              }
             }
           }
         }
@@ -178,6 +231,9 @@ export function useGameLoop(
         drawSkeleton(ctx, pose, canvas.width, canvas.height);
 
         ctx.restore();
+
+        // 绘制粒子特效（正常坐标系）
+        updateAndDrawParticles(ctx, deltaTime);
       } else {
         // 没有检测到人
         if (missingSinceRef.current === null) {

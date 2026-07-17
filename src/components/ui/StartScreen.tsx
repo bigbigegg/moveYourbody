@@ -24,7 +24,7 @@ export function StartScreen() {
     <div className="flex flex-col items-center justify-center text-center h-full w-full px-4">
       {/* 标题 */}
       <h1 className="text-6xl font-bold mb-2 bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">
-        晨间唤醒
+        一起来热身吧
       </h1>
       <p className="text-gray-400 text-xl mb-6">关卡一 · 4 个动作</p>
 

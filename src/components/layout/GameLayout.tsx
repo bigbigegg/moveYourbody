@@ -3,6 +3,7 @@
 // ============================================================
 
 import type { ReactNode } from 'react';
+import { useGameStore } from '../../store/gameStore';
 
 interface GameLayoutProps {
   cameraPanel: ReactNode;
@@ -10,8 +11,10 @@ interface GameLayoutProps {
 }
 
 export function GameLayout({ cameraPanel, children }: GameLayoutProps) {
+  const shakeKey = useGameStore((s) => s.shakeKey);
+
   return (
-    <div className="w-screen h-screen bg-black flex overflow-hidden">
+    <div key={shakeKey} className="w-screen h-screen bg-black flex overflow-hidden shake">
       {/* 左侧：摄像头预览 — 半屏 */}
       <div className="w-1/2 h-full flex items-center justify-center bg-black p-2">
         {cameraPanel}
