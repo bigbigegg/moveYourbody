@@ -41,7 +41,7 @@ export function HUD() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center w-full text-center">
+    <div className="flex flex-col items-center justify-center w-full text-center pt-12">
       {/* 动作序号 */}
       <p className="text-lg text-gray-500 mb-1">动作 {currentMoveIndex + 1}/4</p>
 
